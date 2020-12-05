@@ -12,6 +12,7 @@ class JsonEditor : public QMainWindow
     Q_OBJECT
 
 public:
+    static const int TIME_UPDATE_TABLE = 2000;  ///< 2 sec
     static const QMap<QJsonValue::Type, QString> TYPES_STR;
     explicit JsonEditor(QWidget *parent = nullptr);
     explicit JsonEditor(QJsonModel *model, QWidget *parent = nullptr);
@@ -22,6 +23,7 @@ private slots:
     void checkEnabledEdit();
     void typeChanged();
     QByteArray hashModel() const;
+    QByteArray hashText() const;
     bool fileChanged();
     void updateJsonScript();
 
@@ -33,10 +35,15 @@ private slots:
 
     void on_actClose_triggered();
 
+    void on_actSynch_triggered();
+
 private:
     void selectionChanged();
+    void timerEvent(QTimerEvent *event) override;
+
     Ui::JsonEditor *ui;
     QJsonModel *_model = nullptr;
     QString _fileName;
-    QByteArray _hash;
+    QByteArray _hashModel;
+    int _timerUpdateTable = 0;
 };

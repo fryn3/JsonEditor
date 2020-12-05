@@ -19,23 +19,21 @@ const QMap<QJsonValue::Type, QString> JsonEditor::TYPES_STR {
 JsonEditor::JsonEditor(QWidget *parent) : JsonEditor(new QJsonModel(), parent) { }
 
 JsonEditor::JsonEditor(QJsonModel *model, QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::JsonEditor), _model(nullptr), _hash() {
+    : QMainWindow(parent), ui(new Ui::JsonEditor), _model(nullptr), _hashModel() {
     ui->setupUi(this);
     setModel(model);
     ui->treeView->setModel(model);
     ui->teScript->setPlainText(_model->toByteArray(true));
-
     connect(ui->teScript, &QPlainTextEdit::textChanged, this, [this] {
-        QJsonParseError parse_error;
-        auto jdoc = QJsonDocument::fromJson(ui->teScript->toPlainText().toUtf8(), &parse_error);
-        if (parse_error.error) {
-            ui->statusbar->showMessage(parse_error.errorString());
-            return;
+        if (ui->actAuto->isChecked()) {
+            if (_timerUpdateTable) {
+                killTimer(_timerUpdateTable);
+            }
+            _timerUpdateTable = startTimer(TIME_UPDATE_TABLE);
         }
-        ui->statusbar->showMessage("");
-        if (jdoc != _model->toJsonDoc()) {
-            _model->load(jdoc);
-        }
+        qDebug() << hashText() << hashModel()
+                 << (hashText() == hashModel());
+        ui->actSynch->setEnabled(hashText() != hashModel());
     });
     connect(ui->treeView->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &JsonEditor::selectionChanged);
@@ -72,7 +70,7 @@ void JsonEditor::setModel(QJsonModel *model) {
     connect(_model, &QJsonModel::modelReset, this, &JsonEditor::updateJsonScript);
     connect(_model, &QAbstractItemModel::dataChanged, this, &JsonEditor::selectionChanged);
     connect(_model, &QAbstractItemModel::modelReset, this, &JsonEditor::selectionChanged);
-    _hash = hashModel();
+    _hashModel = hashModel();
     fileChanged();
 }
 
@@ -136,11 +134,15 @@ void JsonEditor::typeChanged() {
 }
 
 QByteArray JsonEditor::hashModel() const {
-    return QCryptographicHash::hash(_model->toByteArray(false), QCryptographicHash::Algorithm::Md5);
+    return QCryptographicHash::hash(_model->toByteArray(true), QCryptographicHash::Algorithm::Md5);
+}
+
+QByteArray JsonEditor::hashText() const {
+    return QCryptographicHash::hash(ui->teScript->toPlainText().toUtf8(), QCryptographicHash::Algorithm::Md5);
 }
 
 bool JsonEditor::fileChanged() {
-    if (hashModel() == _hash) {
+    if (hashModel() == _hashModel) {
         setWindowTitle(_fileName.isEmpty() ? objectName() : _fileName);
         return false;
     } else {
@@ -194,6 +196,14 @@ void JsonEditor::selectionChanged() {
     ui->btnEdit->setEnabled(false);
 }
 
+void JsonEditor::timerEvent(QTimerEvent *event) {
+    if (_timerUpdateTable == event->timerId()) {
+        killTimer(_timerUpdateTable);
+        _timerUpdateTable = 0;
+        on_actSynch_triggered();
+    }
+}
+
 void JsonEditor::on_btnEdit_clicked() {
     auto currIndex = ui->treeView->selectionModel()->currentIndex();
     auto item = static_cast<QJsonTreeItem*>(currIndex.internalPointer());
@@ -242,7 +252,7 @@ void JsonEditor::on_actOpen_triggered() {
         return;
     }
     _model->load(_fileName);
-    _hash = hashModel();
+    _hashModel = hashModel();
     fileChanged();
 }
 
@@ -267,7 +277,7 @@ void JsonEditor::on_actSave_triggered() {
         return;
     }
     f.write(_model->toByteArray(true));
-    _hash = hashModel();
+    _hashModel = hashModel();
     fileChanged();
 }
 
@@ -275,7 +285,7 @@ void JsonEditor::on_actClose_triggered() {
     auto clearFn = [this] {
         _fileName = nullptr;
         _model->clear();
-        _hash = hashModel();
+        _hashModel = hashModel();
         fileChanged();
     };
     if (!fileChanged()) {
@@ -298,5 +308,18 @@ void JsonEditor::on_actClose_triggered() {
         break;
     default:
         qDebug() << __PRETTY_FUNCTION__ << "bad ret"<< ret;
+    }
+}
+
+void JsonEditor::on_actSynch_triggered() {
+    QJsonParseError parse_error;
+    auto jdoc = QJsonDocument::fromJson(ui->teScript->toPlainText().toUtf8(), &parse_error);
+    if (parse_error.error) {
+        ui->statusbar->showMessage(parse_error.errorString());
+        return;
+    }
+    ui->statusbar->showMessage("");
+    if (jdoc != _model->toJsonDoc()) {
+        _model->load(jdoc);
     }
 }
