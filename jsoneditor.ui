@@ -126,7 +126,13 @@
         <string>JSON script</string>
        </property>
       </widget>
-      <widget class="QTreeView" name="treeView"/>
+      <widget class="QTreeView" name="treeView">
+       <property name="font">
+        <font>
+         <family>Consolas</family>
+        </font>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
