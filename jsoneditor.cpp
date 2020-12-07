@@ -31,8 +31,6 @@ JsonEditor::JsonEditor(QJsonModel *model, QWidget *parent)
             }
             _timerUpdateTable = startTimer(TIME_UPDATE_TABLE);
         }
-        qDebug() << hashText() << hashModel()
-                 << (hashText() == hashModel());
         ui->actSynch->setEnabled(hashText() != hashModel());
     });
     connect(ui->treeView->selectionModel(), &QItemSelectionModel::selectionChanged,
@@ -40,7 +38,6 @@ JsonEditor::JsonEditor(QJsonModel *model, QWidget *parent)
     connect(ui->leKey, &QLineEdit::textEdited, this, &JsonEditor::checkEnabledEdit);
     connect(ui->cbType, &QComboBox::currentTextChanged, this, &JsonEditor::checkEnabledEdit);
     connect(ui->leValue, &QLineEdit::textEdited, this, &JsonEditor::checkEnabledEdit);
-    ui->treeView->selectionModel();
     for (auto it = TYPES_STR.cbegin(); it != TYPES_STR.cend(); ++it) {
         ui->cbType->addItem(it.value(), it.key());
     }
@@ -252,6 +249,10 @@ void JsonEditor::on_actOpen_triggered() {
         return;
     }
     _model->load(_fileName);
+    ui->treeView->expandAll();
+    for (int i = 0; i < _model->columnCount(); ++i) {
+        ui->treeView->resizeColumnToContents(i);
+    }
     _hashModel = hashModel();
     fileChanged();
 }
@@ -319,7 +320,12 @@ void JsonEditor::on_actSynch_triggered() {
         return;
     }
     ui->statusbar->showMessage("");
-    if (jdoc != _model->toJsonDoc()) {
-        _model->load(jdoc);
+    if (jdoc == _model->toJsonDoc()) {
+        return;
+    }
+    _model->load(jdoc);
+    ui->treeView->expandAll();
+    for (int i = 0; i < _model->columnCount(); ++i) {
+        ui->treeView->resizeColumnToContents(i);
     }
 }
