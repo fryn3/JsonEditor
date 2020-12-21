@@ -24,6 +24,8 @@ JsonEditor::JsonEditor(QJsonModel *model, QWidget *parent)
     setModel(model);
     ui->treeView->setModel(model);
     ui->teScript->setPlainText(_model->toByteArray(true));
+    ui->btnAddChild->setDefaultAction(ui->actAddChild);
+    ui->btnAddSibling->setDefaultAction(ui->actAddSibling);
     connect(ui->teScript, &QPlainTextEdit::textChanged, this, [this] {
         if (ui->actAuto->isChecked()) {
             if (_timerUpdateTable) {
@@ -42,12 +44,6 @@ JsonEditor::JsonEditor(QJsonModel *model, QWidget *parent)
         ui->cbType->addItem(it.value(), it.key());
     }
     connect(ui->cbType, &QComboBox::currentTextChanged, this, &JsonEditor::typeChanged);
-    connect(ui->btnAddChild, &QPushButton::clicked, this, [this] {
-        _model->addChildren(ui->treeView->selectionModel()->currentIndex());
-    });
-    connect(ui->btnAddSibling, &QPushButton::clicked, this, [this] {
-        _model->addSibling(ui->treeView->selectionModel()->currentIndex());
-    });
     fileChanged();
 }
 
@@ -105,7 +101,7 @@ void JsonEditor::checkEnabledEdit() {
 void JsonEditor::typeChanged() {
     const auto item = static_cast<QJsonTreeItem*>
             (ui->treeView->selectionModel()->currentIndex().internalPointer());
-    ui->btnAddChild->setEnabled(item->isArrayOrObject() || item->type() == QJsonValue::Null);
+    ui->actAddChild->setEnabled(item->isArrayOrObject() || item->type() == QJsonValue::Null);
     switch (ui->cbType->currentData().toInt()) {
     case QJsonValue::Null:
         ui->leValue->clear();
@@ -170,19 +166,19 @@ void JsonEditor::selectionChanged() {
     switch (item->type()) {
     case QJsonValue::Double:
     case QJsonValue::Bool:
-        ui->btnAddChild->setEnabled(false);
+        ui->actAddChild->setEnabled(false);
         ui->leValue->setText(QString("%1").arg(item->value().toDouble()));
         ui->leValue->setEnabled(true);
         break;
     case QJsonValue::String:
-        ui->btnAddChild->setEnabled(false);
+        ui->actAddChild->setEnabled(false);
         ui->leValue->setText(item->value().toString());
         ui->leValue->setEnabled(true);
         break;
     case QJsonValue::Array:
     case QJsonValue::Null:
     case QJsonValue::Object:
-        ui->btnAddChild->setEnabled(true);
+        ui->actAddChild->setEnabled(true);
         ui->leValue->clear();
         ui->leValue->setEnabled(false);
         break;
@@ -328,4 +324,12 @@ void JsonEditor::on_actSynch_triggered() {
     for (int i = 0; i < _model->columnCount(); ++i) {
         ui->treeView->resizeColumnToContents(i);
     }
+}
+
+void JsonEditor::on_actAddChild_triggered() {
+    _model->addChildren(ui->treeView->selectionModel()->currentIndex());
+}
+
+void JsonEditor::on_actAddSibling_triggered() {
+    _model->addSibling(ui->treeView->selectionModel()->currentIndex());
 }

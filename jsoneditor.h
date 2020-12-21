@@ -37,6 +37,10 @@ private slots:
 
     void on_actSynch_triggered();
 
+    void on_actAddChild_triggered();
+
+    void on_actAddSibling_triggered();
+
 private:
     void selectionChanged();
     void timerEvent(QTimerEvent *event) override;
