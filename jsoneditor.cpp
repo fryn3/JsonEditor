@@ -99,8 +99,9 @@ void JsonEditor::checkEnabledEdit() {
 }
 
 void JsonEditor::typeChanged() {
-    const auto item = static_cast<QJsonTreeItem*>
+    auto item = static_cast<QJsonTreeItem*>
             (ui->treeView->selectionModel()->currentIndex().internalPointer());
+    if (!item) { return; }
     ui->actAddChild->setEnabled(item->isArrayOrObject() || item->type() == QJsonValue::Null);
     switch (ui->cbType->currentData().toInt()) {
     case QJsonValue::Null:
@@ -198,6 +199,8 @@ void JsonEditor::timerEvent(QTimerEvent *event) {
 }
 
 void JsonEditor::on_btnEdit_clicked() {
+    auto cbTypeInt = ui->cbType->currentData().toInt();
+    QString strValue = ui->leValue->text();
     auto currIndex = ui->treeView->selectionModel()->currentIndex();
     auto item = static_cast<QJsonTreeItem*>(currIndex.internalPointer());
     bool success = false;
@@ -209,9 +212,8 @@ void JsonEditor::on_btnEdit_clicked() {
             return;
         }
     }
-    QString strValue = ui->leValue->text();
     auto ind1 = currIndex.sibling(currIndex.row(), 1);
-    switch (ui->cbType->currentData().toInt()) {
+    switch (cbTypeInt) {
     case QJsonValue::Null:
     case QJsonValue::Object:
         _model->setData(ind1, QVariant());
