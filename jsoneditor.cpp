@@ -27,6 +27,21 @@ JsonEditor::JsonEditor(QJsonModel *model, QWidget *parent)
     ui->btnAddChild->setDefaultAction(ui->actAddChild);
     ui->btnAddSibling->setDefaultAction(ui->actAddSibling);
     connect(ui->teScript, &QPlainTextEdit::textChanged, this, [this] {
+        auto s = ui->teScript->toPlainText();
+        if (s.contains('\t')) {
+            auto cursorPos = ui->teScript->textCursor().position();
+            int count = 0;
+            int indexFrom = s.indexOf('\t', 0);
+            while (indexFrom < cursorPos && indexFrom != -1) {
+                ++count;
+                indexFrom = s.indexOf('\t', indexFrom + 1);
+            }
+            s.replace("\t", "    ");
+            ui->teScript->setPlainText(s);
+            auto c = ui->teScript->textCursor();
+            c.setPosition(cursorPos + 4 * count - 1);
+            ui->teScript->setTextCursor(c);
+        }
         if (ui->actAuto->isChecked()) {
             if (_timerUpdateTable) {
                 killTimer(_timerUpdateTable);
@@ -146,7 +161,11 @@ bool JsonEditor::fileChanged() {
 }
 
 void JsonEditor::updateJsonScript() {
+    auto cursorPos = ui->teScript->textCursor().position();
     ui->teScript->setPlainText(_model->toByteArray(true));
+    auto c = ui->teScript->textCursor();
+    c.setPosition(cursorPos);
+    ui->teScript->setTextCursor(c);
     fileChanged();
 }
 
